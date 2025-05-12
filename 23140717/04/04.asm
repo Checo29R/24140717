@@ -1,70 +1,75 @@
 section .data
-    long equ 5
-    vec times long db 0
-    skip db 0dh, 0ah, 0dh, 0ah, '$'
-    msg0 db " dato --> $"
-    skip1 db "  ", '$'
+    prompt db "Ingrese un digito (0-9): ", 0
+    newline db 10
+    vec times 5 db 0
+
+section .bss
+    input resb 2   ; 1 byte para el car·cter, 1 para el salto de lÌnea
 
 section .text
     global _start
 
 _start:
-    mov cx, long
-    mov si, 0
+    mov ecx, 0              ; Ìndice
+next_input:
+    ; Mostrar mensaje
+    mov eax, 4              ; syscall write
+    mov ebx, 1              ; stdout
+    mov edx, 24             ; longitud del mensaje
+    mov ecx, prompt
+    int 0x80
 
-ciclo_cap:
-    ; Imprimir saltos de l√≠nea
-    mov dx, skip
-    mov ah, 09h
-    int 21h
-    
-    ; Imprimir mensaje
-    mov dx, msg0
-    mov ah, 09h
-    int 21h
-    
-    ; Leer caracter
-    mov ah, 01h
-    int 21h
-    
-    ; Validar que sea d√≠gito
+    ; Leer car·cter
+    mov eax, 3              ; syscall read
+    mov ebx, 0              ; stdin
+    mov ecx, input
+    mov edx, 2              ; leer 2 bytes (car·cter + newline)
+    int 0x80
+
+    ; Validar car·cter entre '0' y '9'
+    mov al, [input]
     cmp al, '0'
-    jb ciclo_cap
+    jb next_input
     cmp al, '9'
-    ja ciclo_cap
-    
-    ; Guardar en vector
-    mov [vec + si], al
-    
-    ; Incrementar √≠ndice
-    inc si
-    
-    loop ciclo_cap
+    ja next_input
 
-    ; Imprimir saltos de l√≠nea
-    mov cx, 3
-repite:
-    mov dx, skip
-    mov ah, 09h
-    int 21h
-    loop repite
-    
+    ; Guardar en el vector
+    mov [vec + ecx], al
+    inc ecx
+    cmp ecx, 5
+    jne next_input
+
+    ; Imprimir salto de lÌnea
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, newline
+    mov edx, 1
+    int 0x80
+
     ; Imprimir vector
-    mov cx, long
-    mov si, 0
-    
-ciclo_print:
-    mov dl, [vec + si]
-    mov ah, 02h
-    int 21h
-    
-    mov dx, skip1
-    mov ah, 09h
-    int 21h
-    
-    inc si
-    loop ciclo_print
-    
-    ; Terminar programa
-    mov ax, 4c00h
-    int 21h
+    mov ecx, 0
+print_loop:
+    mov al, [vec + ecx]
+    mov [input], al
+
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, input
+    mov edx, 1
+    int 0x80
+
+    ; imprimir espacio
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, newline
+    mov edx, 1
+    int 0x80
+
+    inc ecx
+    cmp ecx, 5
+    jne print_loop
+
+    ; Salir
+    mov eax, 1
+    xor ebx, ebx
+    int 0x80

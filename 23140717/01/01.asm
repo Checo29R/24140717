@@ -11,56 +11,56 @@ section .text
 _start:
     ; Guardar el valor 7 en la pila
     mov al, 7
-    push rax
+    push eax          ; Usamos eax, no rax
 
     ; Sacar el valor de la pila y guardarlo en [valor]
-    pop rax
+    pop eax           ; Usamos eax, no rax
     mov [valor], al
 
     ; Mostrar el mensaje
-    mov rsi, mensaje
+    mov esi, mensaje  ; Cambiar rsi por esi en 32 bits
     call imprimir_cadena
 
-    ; Mostrar el valor (convertido a carÃ¡cter)
-    movzx rax, byte [valor]
+    ; Mostrar el valor (convertido a carácter)
+    movzx eax, byte [valor]
     add al, '0'
     mov [valor], al
-    mov rsi, valor
+    mov esi, valor    ; Cambiar rsi por esi
     call imprimir_cadena
 
-    ; Imprimir salto de lÃ­nea
-    mov rsi, salto
+    ; Imprimir salto de línea
+    mov esi, salto    ; Cambiar rsi por esi
     call imprimir_cadena
 
     ; Salir del programa
-    mov rax, 60         ; syscall: exit
-    xor rdi, rdi        ; cÃ³digo de salida 0
-    syscall
+    mov eax, 1         ; syscall: exit
+    xor ebx, ebx       ; código de salida 0
+    int 0x80           ; interrupción para la syscall
 
 ;-----------------------------------------
-; FunciÃ³n: imprimir_cadena
-; Entrada: RSI -> direcciÃ³n de cadena ASCII terminada en 0
+; Función: imprimir_cadena
+; Entrada: ESI -> dirección de cadena ASCII terminada en 0
 imprimir_cadena:
-    push rax
-    push rdi
-    push rdx
-    push rcx
+    push eax
+    push ebx
+    push edx
+    push ecx
 
-    mov rdi, rsi
-    xor rcx, rcx
+    mov ebx, esi      ; Usamos ebx en lugar de rdi
+    xor ecx, ecx      ; Limpiar ecx para contar la longitud de la cadena
 .next_char:
-    cmp byte [rdi + rcx], 0
+    cmp byte [ebx + ecx], 0
     je .done
-    inc rcx
+    inc ecx
     jmp .next_char
 .done:
-    mov rax, 1          ; syscall: write
-    mov rdi, 1          ; stdout
-    mov rdx, rcx        ; longitud
-    syscall
+    mov eax, 4         ; syscall: write
+    mov ebx, 1         ; stdout
+    mov edx, ecx       ; longitud de la cadena
+    int 0x80           ; interrupción para la syscall
 
-    pop rcx
-    pop rdx
-    pop rdi
-    pop rax
+    pop ecx
+    pop edx
+    pop ebx
+    pop eax
     ret

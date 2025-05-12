@@ -1,196 +1,253 @@
+; archivo: matrices_linux.asm
+
+section .bss
+    matriz1 resd 16
+    matriz2 resd 16
+    matrizSuma resd 16
+    matrizResta resd 16
+    matrizMult resd 16
+    buffer resb 8
+
 section .data
-    long equ 16
-    matriz1 times long dw 0
-    matriz2 times long dw 0
-    matrizSuma times long dw 0
-    matrizResta times long dw 0
-    matrizMult times long dw 0
-    
-    skip db 0dh, 0ah, 0dh, 0ah, '$'
-    msg0 db " Dato --> $"
-    skip1 db "  ", '$'
-    msg1 db "Ingrese la primera matriz:", 0Dh, 0Ah, '$'
-    msg2 db "Ingrese la segunda matriz:", 0Dh, 0Ah, '$'
-    msg3 db "Matriz suma:", 0Dh, 0Ah, '$'
-    msg4 db "Matriz resta:", 0Dh, 0Ah, '$'
-    msg5 db "Matriz multiplicacion:", 0Dh, 0Ah, '$'
+   msg1 db "Ingrese la primera matriz:", 10
+len_msg1 equ $ - msg1
+
+msg2 db "Ingrese la segunda matriz:", 10
+len_msg2 equ $ - msg2
+
+msgSum db "Matriz suma:", 10
+len_msgSum equ $ - msgSum
+
+msgRes db "Matriz resta:", 10
+len_msgRes equ $ - msgRes
+
+msgMul db "Matriz multiplicacion:", 10
+len_msgMul equ $ - msgMul
+
+newline db 0xA, 0
 
 section .text
     global _start
 
 _start:
-    ; Capturar primera matriz
-    mov dx, msg1
-    mov ah, 09h
-    int 21h
-    
-    mov cx, long
-    mov si, 0
+    ; Imprimir mensaje 1
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, msg1
+    mov edx, len_msg1
+    int 0x80
 
-ciclo_cap1:
-    mov dx, skip
-    mov ah, 09h
-    int 21h
-    
-    mov dx, msg0
-    mov ah, 09h
-    int 21h
-    
-    mov ah, 01h
-    int 21h
-    
-    cmp al, '0'
-    jb ciclo_cap1
-    cmp al, '9'
-    ja ciclo_cap1
-    
-    sub al, '0'
-    mov ah, 0
-    mov [matriz1 + si], ax
-    
-    add si, 2
-    loop ciclo_cap1
+    ; Leer 16 enteros para matriz1
+    mov ecx, matriz1
+    call leer_matriz
 
-    ; Capturar segunda matriz
-    mov dx, msg2
-    mov ah, 09h
-    int 21h
-    
-    mov cx, long
-    mov si, 0
+    ; Imprimir mensaje 2
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, msg2
+    mov edx, len_msg2
+    int 0x80
 
-ciclo_cap2:
-    mov dx, skip
-    mov ah, 09h
-    int 21h
-    
-    mov dx, msg0
-    mov ah, 09h
-    int 21h
-    
-    mov ah, 01h
-    int 21h
-    
-    cmp al, '0'
-    jb ciclo_cap2
-    cmp al, '9'
-    ja ciclo_cap2
-    
-    sub al, '0'
-    mov ah, 0
-    mov [matriz2 + si], ax
-    
-    add si, 2
-    loop ciclo_cap2
+    ; Leer 16 enteros para matriz2
+    mov ecx, matriz2
+    call leer_matriz
 
-    ; Saltos de lÃ­nea
-    mov cx, 3
-repite:
-    mov dx, skip
-    mov ah, 09h
-    int 21h
-    loop repite
+    ; Sumar matrices
+    mov esi, matriz1
+    mov edi, matriz2
+    mov ebx, matrizSuma
+    call suma_matrices
 
-    ; Suma de matrices
-    mov dx, msg3
-    mov ah, 09h
-    int 21h
-    
-    mov cx, long
-    mov si, 0
+    ; Restar matrices
+    mov esi, matriz1
+    mov edi, matriz2
+    mov ebx, matrizResta
+    call resta_matrices
 
+    ; Multiplicar matrices
+    mov esi, matriz1
+    mov edi, matriz2
+    mov ebx, matrizMult
+    call multiplicar_matrices
+
+    ; Mostrar matrices
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, msgSum
+    mov edx, len_msgSum
+    int 0x80
+    mov ecx, matrizSuma
+    call imprimir_matriz
+
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, msgRes
+    mov edx, len_msgRes
+    int 0x80
+    mov ecx, matrizResta
+    call imprimir_matriz
+
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, msgMul
+    mov edx, len_msgMul
+    int 0x80
+    mov ecx, matrizMult
+    call imprimir_matriz
+
+    ; Salir del programa
+    mov eax, 1
+    xor ebx, ebx
+    int 0x80
+
+; ============================
+; Subrutina: leer_matriz
+; Entrada: ecx = dirección donde guardar
+; ============================
+leer_matriz:
+    mov esi, 0
+.leer_loop:
+    ; Leer línea (scanf simulado)
+    mov eax, 3
+    mov ebx, 0
+    mov edx, 8
+    mov edi, buffer
+    int 0x80
+
+    ; Convertir a entero (atoi)
+    mov edi, buffer
+    call atoi
+    mov [ecx + esi*4], eax
+    inc esi
+    cmp esi, 16
+    jne .leer_loop
+    ret
+
+; ============================
+; Subrutina: imprimir_matriz
+; Entrada: ecx = dirección de la matriz
+; ============================
+imprimir_matriz:
+    mov esi, 0
+.print_loop:
+    mov eax, [ecx + esi*4]
+    call itoa
+    ; Escribir número
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, buffer
+    mov edx, edi
+    int 0x80
+
+    ; Salto de línea
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, newline
+    mov edx, 1
+    int 0x80
+
+    inc esi
+    cmp esi, 16
+    jne .print_loop
+    ret
+
+; ============================
+; Subrutina: suma_matrices
+; Entrada: esi=mat1, edi=mat2, ebx=resultado
+; ============================
 suma_matrices:
-    mov ax, [matriz1 + si]
-    add ax, [matriz2 + si]
-    mov [matrizSuma + si], ax
-    add si, 2
-    loop suma_matrices
-    
-    ; Mostrar matriz suma
-    mov cx, long
-    mov si, 0
+    mov ecx, 16
+.loop:
+    mov eax, [esi]
+    add eax, [edi]
+    mov [ebx], eax
+    add esi, 4
+    add edi, 4
+    add ebx, 4
+    loop .loop
+    ret
 
-ciclo_print_suma:
-    mov ax, [matrizSuma + si]
-    add al, '0'
-    mov dl, al
-    mov ah, 02h
-    int 21h
-    
-    mov dx, skip1
-    mov ah, 09h
-    int 21h
-    
-    add si, 2
-    loop ciclo_print_suma
-
-    ; Resta de matrices
-    mov dx, msg4
-    mov ah, 09h
-    int 21h
-    
-    mov cx, long
-    mov si, 0
-
+; ============================
+; Subrutina: resta_matrices
+; ============================
 resta_matrices:
-    mov ax, [matriz1 + si]
-    sub ax, [matriz2 + si]
-    mov [matrizResta + si], ax
-    add si, 2
-    loop resta_matrices
-    
-    ; Mostrar matriz resta
-    mov cx, long
-    mov si, 0
+    mov ecx, 16
+.loop:
+    mov eax, [esi]
+    sub eax, [edi]
+    mov [ebx], eax
+    add esi, 4
+    add edi, 4
+    add ebx, 4
+    loop .loop
+    ret
 
-ciclo_print_resta:
-    mov ax, [matrizResta + si]
-    add al, '0'
-    mov dl, al
-    mov ah, 02h
-    int 21h
-    
-    mov dx, skip1
-    mov ah, 09h
-    int 21h
-    
-    add si, 2
-    loop ciclo_print_resta
+; ============================
+; Subrutina: multiplicar_matrices (elemento a elemento)
+; ============================
+multiplicar_matrices:
+    mov ecx, 16
+.loop:
+    mov eax, [esi]
+    imul eax, [edi]
+    mov [ebx], eax
+    add esi, 4
+    add edi, 4
+    add ebx, 4
+    loop .loop
+    ret
 
-    ; MultiplicaciÃ³n de matrices (simplificada para este ejemplo)
-    mov dx, msg5
-    mov ah, 09h
-    int 21h
-    
-    mov cx, long
-    mov si, 0
+; ============================
+; atoi – convierte string en EDI a entero en EAX
+; ============================
+atoi:
+    xor eax, eax
+    xor ebx, ebx
+.next:
+    mov bl, byte [edi]
+    cmp bl, 10
+    je .done
+    cmp bl, 0
+    je .done
+    sub bl, '0'
+    imul eax, eax, 10
+    add eax, ebx
+    inc edi
+    jmp .next
+.done:
+    ret
 
-multiplica_matrices:
-    mov ax, [matriz1 + si]
-    mov bx, [matriz2 + si]
-    mul bx
-    mov [matrizMult + si], ax
-    add si, 2
-    loop multiplica_matrices
-    
-    ; Mostrar matriz multiplicaciÃ³n
-    mov cx, long
-    mov si, 0
+; ============================
+; itoa – convierte número en EAX a string en buffer
+; ============================
+itoa:
+    mov edi, buffer
+    mov ecx, 0
+    mov ebx, 10
+    xor edx, edx
+.reverse:
+    xor edx, edx
+    div ebx
+    add dl, '0'
+    push dx
+    inc ecx
+    test eax, eax
+    jnz .reverse
+.write:
+    pop dx
+    mov [edi], dl
+    inc edi
+    dec ecx
+    jnz .write
+    mov byte [edi], 0
+    sub edi, buffer
+    ret
 
-ciclo_print_multiplicacion:
-    mov ax, [matrizMult + si]
-    add al, '0'
-    mov dl, al
-    mov ah, 02h
-    int 21h
-    
-    mov dx, skip1
-    mov ah, 09h
-    int 21h
-    
-    add si, 2
-    loop ciclo_print_multiplicacion
-
-    ; Terminar programa
-    mov ax, 4c00h
-    int 21h
+; ============================
+; Longitudes
+; ============================
+%define len_msg1 39
+%define len_msg2 39
+%define len_msgSum 14
+%define len_msgRes 14
+%define len_msgMul 23
